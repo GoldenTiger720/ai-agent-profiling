@@ -1,21 +1,22 @@
 
-import React, { useRef } from 'react';
+import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Upload } from 'lucide-react';
+import PDFUploader from './PDFUploader';
+import YouTubePreview from './YouTubePreview';
 
 interface ContentUploaderProps {
   icon: React.ReactNode;
   title: string;
   description: string;
-  onFileChange?: (file: File | null) => void;
+  onFileChange?: (files: File[]) => void;
   inputProps?: {
     name: string;
     value: string;
     onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
     placeholder: string;
   };
+  type?: 'pdf' | 'youtube' | 'default';
 }
 
 const ContentUploader: React.FC<ContentUploaderProps> = ({
@@ -23,19 +24,22 @@ const ContentUploader: React.FC<ContentUploaderProps> = ({
   title,
   description,
   onFileChange,
-  inputProps
+  inputProps,
+  type = 'default'
 }) => {
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0] && onFileChange) {
-      onFileChange(e.target.files[0]);
+  const handleFilesUploaded = (files: File[]) => {
+    if (onFileChange) {
+      onFileChange(files);
     }
   };
 
-  const triggerFileInput = () => {
-    if (fileInputRef.current) {
-      fileInputRef.current.click();
+  const handleYouTubeChange = (url: string) => {
+    if (inputProps?.onChange) {
+      const event = {
+        target: { name: inputProps.name, value: url }
+      } as React.ChangeEvent<HTMLInputElement>;
+      
+      inputProps.onChange(event);
     }
   };
 
@@ -50,27 +54,18 @@ const ContentUploader: React.FC<ContentUploaderProps> = ({
       <CardContent className="space-y-4">
         <p className="text-sm text-muted-foreground">{description}</p>
         
-        {onFileChange && (
-          <div className="flex flex-col items-center">
-            <input
-              type="file"
-              ref={fileInputRef}
-              onChange={handleFileInput}
-              className="hidden"
-              accept=".pdf"
-            />
-            <Button
-              variant="outline"
-              onClick={triggerFileInput}
-              className="w-full text-sm h-auto py-2 border-dashed"
-            >
-              <Upload className="h-4 w-4 mr-2" />
-              Upload File
-            </Button>
-          </div>
+        {type === 'pdf' && onFileChange && (
+          <PDFUploader onFilesUploaded={handleFilesUploaded} />
         )}
         
-        {inputProps && (
+        {type === 'youtube' && inputProps && (
+          <YouTubePreview 
+            url={inputProps.value} 
+            onChange={handleYouTubeChange} 
+          />
+        )}
+        
+        {type === 'default' && inputProps && (
           <Input
             name={inputProps.name}
             value={inputProps.value}

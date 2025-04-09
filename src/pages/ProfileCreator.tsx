@@ -2,14 +2,13 @@
 import React, { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { AlertCircle, FileText, Youtube, Globe, Linkedin, BookOpen, ArrowRight } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
 import ContentUploader from '@/components/ContentUploader';
 import SpeakerProfile from '@/components/SpeakerProfile';
-import { analyzeContent } from '@/services/openaiService';
+import axios from 'axios';
 
 interface ProfileData {
   topics: string[];
@@ -28,7 +27,7 @@ const ProfileCreator = () => {
     linkedinUrl: '',
     bookUrl: '',
   });
-  const [pdfFile, setPdfFile] = useState<File | null>(null);
+  const [pdfFiles, setPdfFiles] = useState<File[]>([]);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [currentStep, setCurrentStep] = useState('input');
   const [profileData, setProfileData] = useState<ProfileData | null>(null);
@@ -38,13 +37,13 @@ const ProfileCreator = () => {
     setInputUrls(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleFileChange = (file: File | null) => {
-    setPdfFile(file);
+  const handleFileChange = (files: File[]) => {
+    setPdfFiles(prev => [...prev, ...files]);
   };
 
   const handleAnalyze = async () => {
     // Check if at least one input is provided
-    const hasInput = pdfFile || Object.values(inputUrls).some(url => url.trim() !== '');
+    const hasInput = pdfFiles.length > 0 || Object.values(inputUrls).some(url => url.trim() !== '');
     if (!hasInput) {
       toast({
         title: "Input Required",
@@ -60,18 +59,31 @@ const ProfileCreator = () => {
 
     try {
       // Build content object to analyze
-      const contentToAnalyze = {
-        file: pdfFile,
-        urls: inputUrls
-      };
+      const formData = new FormData();
+      
+      // Add PDF files
+      pdfFiles.forEach((file, index) => {
+        formData.append(`pdf_files`, file);
+      });
+      
+      // Add URLs
+      Object.entries(inputUrls).forEach(([key, value]) => {
+        if (value.trim() !== '') {
+          formData.append(key, value);
+        }
+      });
       
       // Call our service to analyze content
-      const result = await analyzeContent(contentToAnalyze);
+      const response = await axios.post('http://localhost:8000/api/v1/profiles/create', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
       
       setProfileData({
-        summary: result.summary,
-        topics: result.topics,
-        personality: result.personality
+        summary: response.data.summary || 'No summary available',
+        topics: response.data.topics || [],
+        personality: response.data.personality || []
       });
 
       toast({
@@ -122,12 +134,7 @@ const ProfileCreator = () => {
               title="PDF Documents"
               description="Upload PDFs of presentations, articles, or publications"
               onFileChange={handleFileChange}
-              inputProps={{
-                name: "pdfUrl",
-                value: inputUrls.pdfUrl,
-                onChange: handleInputChange,
-                placeholder: "Or paste a link to a PDF document"
-              }}
+              type="pdf"
             />
             
             <ContentUploader 
@@ -140,6 +147,7 @@ const ProfileCreator = () => {
                 onChange: handleInputChange,
                 placeholder: "Enter YouTube channel or video URL"
               }}
+              type="youtube"
             />
 
             <ContentUploader 
