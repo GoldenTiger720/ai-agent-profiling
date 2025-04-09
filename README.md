@@ -1,71 +1,73 @@
-<h1 align="center">🎤 FindMyStage.com</h1>
+# Welcome to your Lovable project
 
-<p align="center">
-  <b>AI-powered automation to help thought leaders land speaking gigs with zero hassle.</b><br>
-  Turn your existing content into real-world speaking opportunities – fast.
-</p>
+## Project info
 
-<p align="center">
-  <img src="https://img.shields.io/badge/AI-NLP-blueviolet?style=flat-square" />
-  <img src="https://img.shields.io/badge/Built%20for-Speakers-brightgreen?style=flat-square" />
-  <img src="https://img.shields.io/badge/Automation-100%25-orange?style=flat-square" />
-</p>
+**URL**: https://lovable.dev/projects/511acadd-50a6-4bb9-b159-85f033c75db8
 
----
+## How can I edit this code?
 
-## ✨ What is FindMyStage?
+There are several ways of editing your application.
 
-**FindMyStage** is a smart assistant that:
+**Use Lovable**
 
-- Analyzes your content (PDFs, YouTube, Website, LinkedIn, or even Books)
-- Creates a speaker + topic summary
-- Finds matching events and organizers
-- Writes outreach content (articles, social posts, and DMs)
-- Applies on your behalf
+Simply visit the [Lovable Project](https://lovable.dev/projects/511acadd-50a6-4bb9-b159-85f033c75db8) and start prompting.
 
-🎯 **Goal**: Save speakers hours of manual work and get them booked faster.
+Changes made via Lovable will be committed automatically to this repo.
 
----
+**Use your preferred IDE**
 
-## 🔁 How It Works
+If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
 
-```mermaid
-flowchart LR
-    A[🟢 User Input<br>PDF, YouTube, LinkedIn, Website, Book] --> B[🤖 AI Agent<br>Scans & Understands]
-    B --> C[🧠 Speaker Summary]
-    B --> D[🧠 Topic Summary]
-    C --> E[🔎 AI: Keyword & Event Search<br>+ Organizer Profiling]
-    E --> F[🎯 Targeted Stage DB]
-    E --> G[💌 Organizer Love<br>2 Articles + 5 Social Posts]
-    F --> H[📤 Outreach Engine<br>Email & DM Submissions]
+The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+
+Follow these steps:
+
+```sh
+# Step 1: Clone the repository using the project's Git URL.
+git clone <YOUR_GIT_URL>
+
+# Step 2: Navigate to the project directory.
+cd <YOUR_PROJECT_NAME>
+
+# Step 3: Install the necessary dependencies.
+npm i
+
+# Step 4: Start the development server with auto-reloading and an instant preview.
+npm run dev
 ```
 
-<h1 align="center">🎤 FindMyStage.com</h1>
+**Edit a file directly in GitHub**
 
-<p align="center">
-  <b>AI-powered automation to help thought leaders land speaking gigs with zero hassle.</b><br>
-  Turn your existing content into real-world speaking opportunities – fast.
-</p>
+- Navigate to the desired file(s).
+- Click the "Edit" button (pencil icon) at the top right of the file view.
+- Make your changes and commit the changes.
 
-<p align="center">
-  <img src="https://img.shields.io/badge/AI-NLP-blueviolet?style=flat-square" />
-  <img src="https://img.shields.io/badge/Built%20for-Speakers-brightgreen?style=flat-square" />
-  <img src="https://img.shields.io/badge/Automation-100%25-orange?style=flat-square" />
-</p>
+**Use GitHub Codespaces**
 
-⚙️ Inputs We Support
-Type Examples
-📄 PDF Bio, resume, speaker one-sheet
-📺 YouTube Channel or key videos
-🌐 Website Blog, portfolio, company
-💼 LinkedIn Personal or business profiles
-📚 Book Published works or drafts
+- Navigate to the main page of your repository.
+- Click on the "Code" button (green button) near the top right.
+- Select the "Codespaces" tab.
+- Click on "New codespace" to launch a new Codespace environment.
+- Edit files directly within the Codespace and commit and push your changes once you're done.
 
-```
+## What technologies are used for this project?
 
-🚀 Features
-✅ Zero Manual Research: Finds events and builds organizer DB
-✍️ Content Wizard: Auto-generates articles and social media posts
-📫 One-Click Outreach: Applies to CFS with aligned messaging
-🔎 Smart Matching: Keywords + personality matching for event targeting
-```
+This project is built with:
+
+- Vite
+- TypeScript
+- React
+- shadcn-ui
+- Tailwind CSS
+
+## How can I deploy this project?
+
+Simply open [Lovable](https://lovable.dev/projects/511acadd-50a6-4bb9-b159-85f033c75db8) and click on Share -> Publish.
+
+## Can I connect a custom domain to my Lovable project?
+
+Yes it is!
+
+To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+
+Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)

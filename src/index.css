@@ -111,3 +111,98 @@
 .delay-500 {
   animation-delay: 500ms;
 }
+
+/* New floating animations for the journalist cards */
+@keyframes float-up-down {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-30px);
+  }
+}
+
+@keyframes float-down-up {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(30px);
+  }
+}
+
+/* New continuous upward animation for speaker cards */
+@keyframes continuous-float-up {
+  0% {
+    transform: translateY(20%);
+  }
+  100% {
+    transform: translateY(-100%);
+  }
+}
+
+/* 3D rotation animation for community image */
+@keyframes rotate-3d {
+  0% {
+    transform: perspective(1000px) rotateY(0deg);
+  }
+  100% {
+    transform: perspective(1000px) rotateY(360deg);
+  }
+}
+
+.rotate-3d {
+  animation: rotate-3d 15s linear infinite;
+  transform-style: preserve-3d;
+}
+
+.image-container-3d {
+  perspective: 1000px;
+  overflow: hidden;
+  border-radius: 0.5rem;
+}
+
+/* Speaker card specific styles */
+.speakers-display {
+  margin-top: 2rem;
+  height: 400px;
+  position: relative;
+  overflow: hidden;
+}
+
+.speakers-row {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  margin-top: 1rem;
+  position: absolute;
+  animation: continuous-float-up 15s linear infinite;
+}
+
+/* Clone the speakers-row for seamless infinite animation */
+.speakers-row:nth-child(2) {
+  top: 100%;
+  animation-delay: -7.5s;
+}
+
+.speaker-card-container {
+  width: 350px;
+  flex-shrink: 0;
+}
+
+.speaker-card {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.speaker-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+.avatar-container {
+  margin-top: 0.5rem;
+}
+
+.avatar-container img {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
