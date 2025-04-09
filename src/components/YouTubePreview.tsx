@@ -1,9 +1,8 @@
-
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { AlertCircle, Youtube } from 'lucide-react';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import React, { useState, useEffect } from "react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { AlertCircle, Youtube } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface YouTubePreviewProps {
   url: string;
@@ -24,18 +23,17 @@ const YouTubePreview: React.FC<YouTubePreviewProps> = ({ url, onChange }) => {
     }
 
     try {
-      // Extract video ID from YouTube URL
       let extractedId: string | null = null;
-      
+
       // Handle youtu.be format
-      if (url.includes('youtu.be')) {
+      if (url.includes("youtu.be")) {
         const match = url.match(/youtu\.be\/([^?&]+)/);
         if (match && match[1]) extractedId = match[1];
-      } 
+      }
       // Handle youtube.com format
-      else if (url.includes('youtube.com')) {
+      else if (url.includes("youtube.com")) {
         const urlObj = new URL(url);
-        extractedId = urlObj.searchParams.get('v');
+        extractedId = urlObj.searchParams.get("v");
       }
 
       if (extractedId) {
@@ -43,11 +41,11 @@ const YouTubePreview: React.FC<YouTubePreviewProps> = ({ url, onChange }) => {
         setError(null);
       } else {
         setVideoId(null);
-        setError('Invalid YouTube URL format');
+        setError("Invalid YouTube URL format");
       }
     } catch (e) {
       setVideoId(null);
-      setError('Invalid URL');
+      setError("Invalid URL");
     }
   }, [url]);
 
@@ -75,11 +73,14 @@ const YouTubePreview: React.FC<YouTubePreviewProps> = ({ url, onChange }) => {
       )}
 
       {videoId && !showEmbed && (
-        <Card className="overflow-hidden cursor-pointer hover:opacity-90 transition-opacity" onClick={handleThumbnailClick}>
+        <Card
+          className="overflow-hidden cursor-pointer hover:opacity-90 transition-opacity"
+          onClick={handleThumbnailClick}
+        >
           <CardContent className="p-0">
             <div className="aspect-video w-full relative">
-              <img 
-                src={`https://img.youtube.com/vi/${videoId}/hqdefault.jpg`} 
+              <img
+                src={`https://img.youtube.com/vi/${videoId}/hqdefault.jpg`}
                 alt="YouTube Thumbnail"
                 className="w-full h-full object-cover"
               />
@@ -97,13 +98,13 @@ const YouTubePreview: React.FC<YouTubePreviewProps> = ({ url, onChange }) => {
         <Card className="overflow-hidden">
           <CardContent className="p-0">
             <div className="aspect-video w-full">
-              <iframe 
-                width="100%" 
-                height="100%" 
+              <iframe
+                width="100%"
+                height="100%"
                 src={`https://www.youtube.com/embed/${videoId}`}
-                title="YouTube video player" 
-                frameBorder="0" 
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                title="YouTube video player"
+                frameBorder="0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                 allowFullScreen
               ></iframe>
             </div>
