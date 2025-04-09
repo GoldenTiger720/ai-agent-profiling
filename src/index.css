@@ -1,4 +1,3 @@
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -114,7 +113,8 @@
 
 /* New floating animations for the journalist cards */
 @keyframes float-up-down {
-  0%, 100% {
+  0%,
+  100% {
     transform: translateY(0);
   }
   50% {
@@ -123,7 +123,8 @@
 }
 
 @keyframes float-down-up {
-  0%, 100% {
+  0%,
+  100% {
     transform: translateY(0);
   }
   50% {
@@ -131,10 +132,10 @@
   }
 }
 
-/* New continuous upward animation for speaker cards */
+/* Continuous upward animation for speaker cards */
 @keyframes continuous-float-up {
   0% {
-    transform: translateY(20%);
+    transform: translateY(0);
   }
   100% {
     transform: translateY(-100%);
@@ -165,7 +166,7 @@
 /* Speaker card specific styles */
 .speakers-display {
   margin-top: 2rem;
-  height: 400px;
+  height: 450px; /* Fixed height container */
   position: relative;
   overflow: hidden;
 }
@@ -173,30 +174,29 @@
 .speakers-row {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
-  margin-top: 1rem;
   position: absolute;
-  animation: continuous-float-up 15s linear infinite;
+  width: 100%;
+  animation: continuous-float-up 10s linear infinite;
 }
 
 /* Clone the speakers-row for seamless infinite animation */
 .speakers-row:nth-child(2) {
   top: 100%;
-  animation-delay: -7.5s;
 }
 
 .speaker-card-container {
-  width: 350px;
-  flex-shrink: 0;
+  width: 100%;
+  margin-bottom: 0.5rem; /* Small margin between cards */
 }
 
 .speaker-card {
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  transition: transform 0.2s ease, box-shadow 0.3s ease;
 }
 
 .speaker-card:hover {
   transform: translateY(-5px);
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1),
+    0 10px 10px -5px rgba(0, 0, 0, 0.04);
 }
 
 .avatar-container {
@@ -204,5 +204,6 @@
 }
 
 .avatar-container img {
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -1px rgba(0, 0, 0, 0.06);
 }
