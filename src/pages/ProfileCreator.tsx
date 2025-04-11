@@ -1,14 +1,20 @@
-
-import React, { useState } from 'react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import { AlertCircle, FileText, Youtube, Globe, Linkedin, BookOpen, ArrowRight } from 'lucide-react';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { useToast } from '@/hooks/use-toast';
-import ContentUploader from '@/components/ContentUploader';
-import SpeakerProfile from '@/components/SpeakerProfile';
-import axios from 'axios';
+import React, { useState } from "react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import {
+  AlertCircle,
+  FileText,
+  Youtube,
+  Globe,
+  Linkedin,
+  BookOpen,
+  ArrowRight,
+} from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useToast } from "@/hooks/use-toast";
+import ContentUploader from "@/components/ContentUploader";
+import SpeakerProfile from "@/components/SpeakerProfile";
+import axios from "axios";
 
 interface ProfileData {
   topics: string[];
@@ -21,69 +27,77 @@ interface ProfileData {
 const ProfileCreator = () => {
   const { toast } = useToast();
   const [inputUrls, setInputUrls] = useState({
-    pdfUrl: '',
-    youtubeUrl: '',
-    websiteUrl: '',
-    linkedinUrl: '',
-    bookUrl: '',
+    pdfUrl: "",
+    youtubeUrl: "",
+    websiteUrl: "",
+    linkedinUrl: "",
+    bookUrl: "",
   });
-  const [pdfFiles, setPdfFiles] = useState<File[]>([]);
+  const [pdfFile, setPdfFile] = useState<File | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [currentStep, setCurrentStep] = useState('input');
+  const [currentStep, setCurrentStep] = useState("input");
   const [profileData, setProfileData] = useState<ProfileData | null>(null);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
     const { name, value } = e.target;
-    setInputUrls(prev => ({ ...prev, [name]: value }));
+    setInputUrls((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleFileChange = (files: File[]) => {
-    setPdfFiles(prev => [...prev, ...files]);
+    setPdfFile(files.length > 0 ? files[0] : null);
   };
 
   const handleAnalyze = async () => {
-    // Check if at least one input is provided
-    const hasInput = pdfFiles.length > 0 || Object.values(inputUrls).some(url => url.trim() !== '');
+    const hasInput =
+      pdfFile !== null ||
+      Object.values(inputUrls).some((url) => url.trim() !== "");
     if (!hasInput) {
       toast({
         title: "Input Required",
         description: "Please provide at least one content source to analyze",
-        variant: "destructive"
+        variant: "destructive",
       });
       return;
     }
 
     setIsAnalyzing(true);
-    setProfileData({ topics: [], personality: [], summary: '', isLoading: true });
-    setCurrentStep('profile');
+    setProfileData({
+      topics: [],
+      personality: [],
+      summary: "",
+      isLoading: true,
+    });
+    setCurrentStep("profile");
 
     try {
-      // Build content object to analyze
       const formData = new FormData();
-      
-      // Add PDF files
-      pdfFiles.forEach((file, index) => {
-        formData.append(`pdf_files`, file);
-      });
-      
-      // Add URLs
+
+      if (pdfFile) {
+        formData.append("pdf_files", pdfFile);
+      }
+
       Object.entries(inputUrls).forEach(([key, value]) => {
-        if (value.trim() !== '') {
+        if (value.trim() !== "") {
           formData.append(key, value);
         }
       });
-      
-      // Call our service to analyze content
-      const response = await axios.post('http://localhost:8000/api/v1/profiles/create', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
+
+      const response = await axios.post(
+        "http://localhost:8000/api/v1/profiles/create",
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
         }
-      });
-      
+      );
+
       setProfileData({
-        summary: response.data.summary || 'No summary available',
+        summary: response.data.summary || "No summary available",
         topics: response.data.topics || [],
-        personality: response.data.personality || []
+        personality: response.data.personality || [],
       });
 
       toast({
@@ -95,14 +109,14 @@ const ProfileCreator = () => {
       setProfileData({
         topics: [],
         personality: [],
-        summary: '',
-        error: "Failed to analyze content. Please try again."
+        summary: "",
+        error: "Failed to analyze content. Please try again.",
       });
-      
+
       toast({
         title: "Analysis Failed",
         description: "There was an error analyzing your content",
-        variant: "destructive"
+        variant: "destructive",
       });
     } finally {
       setIsAnalyzing(false);
@@ -114,30 +128,39 @@ const ProfileCreator = () => {
       <div className="text-center space-y-4">
         <h1 className="text-3xl font-bold">Speaker Profile Creator</h1>
         <p className="text-muted-foreground max-w-2xl mx-auto">
-          Upload content or provide links to generate a comprehensive speaker profile.
-          Our AI will analyze your content to identify key topics and personality traits.
+          Upload content or provide links to generate a comprehensive speaker
+          profile. Our AI will analyze your content to identify key topics and
+          personality traits.
         </p>
       </div>
 
-      <Tabs value={currentStep} onValueChange={setCurrentStep} className="space-y-6">
+      <Tabs
+        value={currentStep}
+        onValueChange={setCurrentStep}
+        className="space-y-6"
+      >
         <div className="flex justify-center">
           <TabsList className="grid grid-cols-2 w-[400px]">
             <TabsTrigger value="input">Content Input</TabsTrigger>
-            <TabsTrigger value="profile" disabled={!profileData}>Speaker Profile</TabsTrigger>
+            <TabsTrigger value="profile" disabled={!profileData}>
+              Speaker Profile
+            </TabsTrigger>
           </TabsList>
         </div>
 
         <TabsContent value="input" className="space-y-6 min-h-[60vh]">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <ContentUploader 
-              icon={<FileText className="h-5 w-5 text-findmystage-green" />}
-              title="PDF Documents"
-              description="Upload PDFs of presentations, articles, or publications"
-              onFileChange={handleFileChange}
-              type="pdf"
-            />
-            
-            <ContentUploader 
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 auto-rows-auto">
+            <div className="md:col-span-2">
+              <ContentUploader
+                icon={<FileText className="h-5 w-5 text-findmystage-green" />}
+                title="PDF Documents"
+                description="Upload a PDF of a presentation, article, or publication"
+                onFileChange={handleFileChange}
+                type="pdf"
+              />
+            </div>
+
+            <ContentUploader
               icon={<Youtube className="h-5 w-5 text-findmystage-green" />}
               title="YouTube Content"
               description="Link to your YouTube channel or specific videos"
@@ -145,12 +168,12 @@ const ProfileCreator = () => {
                 name: "youtubeUrl",
                 value: inputUrls.youtubeUrl,
                 onChange: handleInputChange,
-                placeholder: "Enter YouTube channel or video URL"
+                placeholder: "Enter YouTube channel or video URL",
               }}
               type="youtube"
             />
 
-            <ContentUploader 
+            <ContentUploader
               icon={<Globe className="h-5 w-5 text-findmystage-green" />}
               title="Website"
               description="Link to your personal website or blog"
@@ -158,11 +181,11 @@ const ProfileCreator = () => {
                 name: "websiteUrl",
                 value: inputUrls.websiteUrl,
                 onChange: handleInputChange,
-                placeholder: "Enter website URL"
+                placeholder: "Enter website URL",
               }}
             />
 
-            <ContentUploader 
+            <ContentUploader
               icon={<Linkedin className="h-5 w-5 text-findmystage-green" />}
               title="LinkedIn Profile"
               description="Link to your LinkedIn profile"
@@ -170,11 +193,11 @@ const ProfileCreator = () => {
                 name: "linkedinUrl",
                 value: inputUrls.linkedinUrl,
                 onChange: handleInputChange,
-                placeholder: "Enter LinkedIn profile URL"
+                placeholder: "Enter LinkedIn profile URL",
               }}
             />
 
-            <ContentUploader 
+            <ContentUploader
               icon={<BookOpen className="h-5 w-5 text-findmystage-green" />}
               title="Books"
               description="Link to your published books or articles"
@@ -182,7 +205,7 @@ const ProfileCreator = () => {
                 name: "bookUrl",
                 value: inputUrls.bookUrl,
                 onChange: handleInputChange,
-                placeholder: "Enter book URL or ISBN"
+                placeholder: "Enter book URL or ISBN",
               }}
             />
           </div>
@@ -191,14 +214,15 @@ const ProfileCreator = () => {
             <AlertCircle className="h-4 w-4 text-findmystage-blue" />
             <AlertTitle>Provide as much content as possible</AlertTitle>
             <AlertDescription>
-              The more content you provide, the more accurate your speaker profile will be.
-              You don't need to fill all fields, but the AI works best with multiple sources.
+              The more content you provide, the more accurate your speaker
+              profile will be. You don't need to fill all fields, but the AI
+              works best with multiple sources.
             </AlertDescription>
           </Alert>
 
           <div className="flex justify-center mt-8">
-            <Button 
-              onClick={handleAnalyze} 
+            <Button
+              onClick={handleAnalyze}
               disabled={isAnalyzing}
               size="lg"
               className="flex items-center gap-2"
