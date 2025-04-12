@@ -1,6 +1,5 @@
-
-import React from 'react';
-import { ThemeProvider } from '@/contexts/ThemeContext';
+import React from "react";
+import { ThemeProvider } from "@/contexts/ThemeContext";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";

@@ -9,17 +9,25 @@ import {
   Linkedin,
   BookOpen,
   ArrowRight,
+  Loader2,
 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import ContentUploader from "@/components/ContentUploader";
 import SpeakerProfile from "@/components/SpeakerProfile";
 import axios from "axios";
+import { extractTextFromPdf } from "@/services/pdfService";
+import {
+  analyzePdfContent,
+  extractTopics,
+  extractPersonality,
+  extractSummary,
+} from "@/services/openai";
 
 interface ProfileData {
   topics: string[];
   personality: string[];
-  summary: string;
+  summary: any;
   isLoading?: boolean;
   error?: string;
 }
@@ -72,40 +80,112 @@ const ProfileCreator = () => {
     setCurrentStep("profile");
 
     try {
-      const formData = new FormData();
+      let contentToAnalyze = "";
 
+      // Extract text from PDF if available
       if (pdfFile) {
-        formData.append("pdf_files", pdfFile);
+        try {
+          contentToAnalyze = await extractTextFromPdf(pdfFile);
+          // console.log(
+          //   "Extracted PDF text:",
+          //   contentToAnalyze.substring(0, 100) + "..."
+          // );
+        } catch (error) {
+          console.error("Error extracting text from PDF:", error);
+          toast({
+            title: "PDF Processing Error",
+            description: "Failed to extract text from the PDF document",
+            variant: "destructive",
+          });
+        }
       }
 
-      Object.entries(inputUrls).forEach(([key, value]) => {
-        if (value.trim() !== "") {
-          formData.append(key, value);
+      // If we have content to analyze (from PDF), use OpenAI
+      if (contentToAnalyze) {
+        try {
+          const openAIResponse = await analyzePdfContent(contentToAnalyze);
+          // console.log("OpenAI Response:", openAIResponse);
+
+          // Extract structured data from the OpenAI response
+          const topics = extractTopics(openAIResponse);
+          const personality = extractPersonality(openAIResponse);
+          const summary = extractSummary(openAIResponse);
+
+          setProfileData({
+            summary: summary,
+            topics: topics,
+            personality: personality,
+          });
+
+          toast({
+            title: "Analysis Complete",
+            description: "Speaker profile has been generated successfully",
+          });
+        } catch (error) {
+          console.error("Error analyzing with OpenAI:", error);
+          setProfileData({
+            topics: [],
+            personality: [],
+            summary: "",
+            error: "Failed to analyze content with AI. Please try again.",
+          });
+
+          toast({
+            title: "AI Analysis Failed",
+            description: "Error processing your content with AI",
+            variant: "destructive",
+          });
         }
-      });
+      } else {
+        // Fallback to backend API if no PDF content (or use mock data)
+        const formData = new FormData();
 
-      const response = await axios.post(
-        "http://localhost:8000/api/v1/profiles/create",
-        formData,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
+        Object.entries(inputUrls).forEach(([key, value]) => {
+          if (value.trim() !== "") {
+            formData.append(key, value);
+          }
+        });
+
+        try {
+          const response = await axios.post(
+            "http://localhost:8000/api/v1/profiles/create",
+            formData,
+            {
+              headers: {
+                "Content-Type": "multipart/form-data",
+              },
+            }
+          );
+
+          setProfileData({
+            summary: response.data.summary || "No summary available",
+            topics: response.data.topics || [],
+            personality: response.data.personality || [],
+          });
+
+          toast({
+            title: "Analysis Complete",
+            description:
+              "Speaker profile has been generated from provided URLs",
+          });
+        } catch (error) {
+          console.error("Error analyzing content with backend API:", error);
+          setProfileData({
+            topics: [],
+            personality: [],
+            summary: "",
+            error: "Failed to analyze content. Please try again.",
+          });
+
+          toast({
+            title: "Analysis Failed",
+            description: "There was an error analyzing your content",
+            variant: "destructive",
+          });
         }
-      );
-
-      setProfileData({
-        summary: response.data.summary || "No summary available",
-        topics: response.data.topics || [],
-        personality: response.data.personality || [],
-      });
-
-      toast({
-        title: "Analysis Complete",
-        description: "Speaker profile has been generated successfully",
-      });
+      }
     } catch (error) {
-      console.error("Error analyzing content:", error);
+      console.error("General error during analysis:", error);
       setProfileData({
         topics: [],
         personality: [],
@@ -227,8 +307,17 @@ const ProfileCreator = () => {
               size="lg"
               className="flex items-center gap-2"
             >
-              {isAnalyzing ? "Analyzing..." : "Generate Speaker Profile"}
-              {!isAnalyzing && <ArrowRight className="h-4 w-4" />}
+              {isAnalyzing ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Analyzing...
+                </>
+              ) : (
+                <>
+                  Generate Speaker Profile
+                  <ArrowRight className="h-4 w-4" />
+                </>
+              )}
             </Button>
           </div>
         </TabsContent>

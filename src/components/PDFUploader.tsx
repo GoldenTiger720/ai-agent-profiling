@@ -1,18 +1,8 @@
-
 import React, { useState, useRef, useCallback } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  AlertCircle,
-  File,
-  Upload,
-  X,
-  Check,
-  Copy,
-  FileType,
-} from "lucide-react";
+import { AlertCircle, File, Upload, X, Check, FileType } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import axios from "axios";
@@ -56,7 +46,7 @@ const PDFUploader: React.FC<PDFUploaderProps> = ({ onFilesUploaded }) => {
         if (pdfFile && pdfFile.preview) {
           URL.revokeObjectURL(pdfFile.preview);
         }
-        
+
         const newPdfFile: PDFFile = {
           file,
           id: Math.random().toString(36).substr(2, 9),
@@ -67,7 +57,7 @@ const PDFUploader: React.FC<PDFUploaderProps> = ({ onFilesUploaded }) => {
           error: null,
           content: null,
         };
-        
+
         setPdfFile(newPdfFile);
         onFilesUploaded([file]); // Pass the single file to the parent
       } else {
@@ -113,7 +103,7 @@ const PDFUploader: React.FC<PDFUploaderProps> = ({ onFilesUploaded }) => {
   const uploadFile = useCallback(async () => {
     if (!pdfFile || pdfFile.uploading || pdfFile.uploaded) return;
 
-    setPdfFile((prev) => 
+    setPdfFile((prev) =>
       prev ? { ...prev, uploading: true, error: null } : null
     );
 
@@ -130,7 +120,7 @@ const PDFUploader: React.FC<PDFUploaderProps> = ({ onFilesUploaded }) => {
               const percentCompleted = Math.round(
                 (progressEvent.loaded * 100) / progressEvent.total
               );
-              setPdfFile((prev) => 
+              setPdfFile((prev) =>
                 prev ? { ...prev, progress: percentCompleted } : null
               );
             }
@@ -138,14 +128,16 @@ const PDFUploader: React.FC<PDFUploaderProps> = ({ onFilesUploaded }) => {
         }
       );
 
-      setPdfFile((prev) => 
-        prev ? {
-          ...prev,
-          uploading: false,
-          uploaded: true,
-          content: response.data?.content || null,
-          progress: 100,
-        } : null
+      setPdfFile((prev) =>
+        prev
+          ? {
+              ...prev,
+              uploading: false,
+              uploaded: true,
+              content: response.data?.content || null,
+              progress: 100,
+            }
+          : null
       );
 
       toast({
@@ -153,13 +145,15 @@ const PDFUploader: React.FC<PDFUploaderProps> = ({ onFilesUploaded }) => {
         description: `${pdfFile.file.name} has been uploaded successfully`,
       });
     } catch (error) {
-      setPdfFile((prev) => 
-        prev ? {
-          ...prev,
-          uploading: false,
-          error: "Failed to upload file",
-          progress: 0,
-        } : null
+      setPdfFile((prev) =>
+        prev
+          ? {
+              ...prev,
+              uploading: false,
+              error: "Failed to upload file",
+              progress: 0,
+            }
+          : null
       );
 
       toast({
@@ -178,17 +172,6 @@ const PDFUploader: React.FC<PDFUploaderProps> = ({ onFilesUploaded }) => {
     onFilesUploaded([]); // Clear files in parent component
   }, [pdfFile, onFilesUploaded]);
 
-  const copyContent = useCallback(
-    (content: string) => {
-      navigator.clipboard.writeText(content);
-      toast({
-        title: "Content copied",
-        description: "File content has been copied to clipboard",
-      });
-    },
-    [toast]
-  );
-
   return (
     <div className="flex flex-col space-y-4">
       <div
@@ -205,7 +188,6 @@ const PDFUploader: React.FC<PDFUploaderProps> = ({ onFilesUploaded }) => {
           onChange={handleFileChange}
           className="hidden"
           accept=".pdf"
-          // Changed to single selection
         />
         <File className="h-12 w-12 mx-auto text-findmystage-green mb-4" />
         <h3 className="text-lg font-medium mb-2">
@@ -222,10 +204,8 @@ const PDFUploader: React.FC<PDFUploaderProps> = ({ onFilesUploaded }) => {
 
       {pdfFile && (
         <div className="flex flex-col md:flex-row gap-4">
-          <div className="md:w-1/2 space-y-4">
-            <h3 className="text-lg font-medium">
-              Selected PDF File
-            </h3>
+          <div className="md:w-full space-y-4">
+            <h3 className="text-lg font-medium">Selected PDF File</h3>
             <Card className="overflow-hidden">
               <CardContent className="p-4">
                 <div className="flex flex-col space-y-4">
@@ -283,30 +263,6 @@ const PDFUploader: React.FC<PDFUploaderProps> = ({ onFilesUploaded }) => {
                       <AlertDescription>{pdfFile.error}</AlertDescription>
                     </Alert>
                   )}
-
-                  {pdfFile.content && (
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <h4 className="text-sm font-medium">
-                          Content Preview
-                        </h4>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => copyContent(pdfFile.content || "")}
-                          className="h-6 gap-1"
-                        >
-                          <Copy className="h-3.5 w-3.5" />
-                          Copy
-                        </Button>
-                      </div>
-                      <Textarea
-                        value={pdfFile.content}
-                        readOnly
-                        className="h-24 text-xs"
-                      />
-                    </div>
-                  )}
                 </div>
               </CardContent>
             </Card>
@@ -315,10 +271,7 @@ const PDFUploader: React.FC<PDFUploaderProps> = ({ onFilesUploaded }) => {
           <div className="md:w-1/2">
             {pdfFile && (
               <div className="sticky top-4">
-                <PDFPreview
-                  file={pdfFile.file}
-                  previewUrl={pdfFile.preview}
-                />
+                <PDFPreview file={pdfFile.file} previewUrl={pdfFile.preview} />
               </div>
             )}
           </div>

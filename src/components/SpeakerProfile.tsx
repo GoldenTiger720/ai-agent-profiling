@@ -1,17 +1,16 @@
-
-import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Share2, Download, UserCheck, MessageSquare, Mail } from 'lucide-react';
-import { Separator } from '@/components/ui/separator';
-import { Progress } from '@/components/ui/progress';
+import React from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Share2, Download, UserCheck, MessageSquare, Mail } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
+import { Progress } from "@/components/ui/progress";
 
 interface ProfileData {
   topics: string[];
   personality: string[];
-  summary: string;
+  summary: any;
   isLoading?: boolean;
   error?: string;
 }
@@ -26,12 +25,14 @@ const SpeakerProfile: React.FC<SpeakerProfileProps> = ({ data }) => {
       <div className="space-y-6">
         <Card className="output-section">
           <CardHeader>
-            <CardTitle className="text-center text-xl">Generating Speaker Profile...</CardTitle>
+            <CardTitle className="text-center text-xl">
+              Generating Speaker Profile...
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-6 text-center">
             <p className="text-muted-foreground">
-              Our AI is analyzing your content and creating a comprehensive speaker profile.
-              This may take a minute or two.
+              Our AI is analyzing your content and creating a comprehensive
+              speaker profile. This may take a minute or two.
             </p>
             <Progress value={45} className="w-full max-w-md mx-auto" />
           </CardContent>
@@ -45,7 +46,9 @@ const SpeakerProfile: React.FC<SpeakerProfileProps> = ({ data }) => {
       <div className="space-y-6">
         <Card className="border-destructive">
           <CardHeader>
-            <CardTitle className="text-center text-xl text-destructive">Analysis Failed</CardTitle>
+            <CardTitle className="text-center text-xl text-destructive">
+              Analysis Failed
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-6 text-center">
             <p className="text-muted-foreground">{data.error}</p>
@@ -76,8 +79,11 @@ const SpeakerProfile: React.FC<SpeakerProfileProps> = ({ data }) => {
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="space-y-4">
-            <h3 className="text-lg font-medium">Speaker Summary</h3>
-            <p>{data.summary}</p>
+            {data.summary.map((para, index) => (
+              <p key={index} className="text-base leading-relaxed">
+                {para}
+              </p>
+            ))}
           </div>
 
           <Separator />
@@ -126,7 +132,8 @@ const SpeakerProfile: React.FC<SpeakerProfileProps> = ({ data }) => {
             </TabsList>
             <TabsContent value="matches" className="space-y-4 pt-4">
               <p className="text-muted-foreground">
-                Based on your profile, here are speaking opportunities that would be a good fit:
+                Based on your profile, here are speaking opportunities that
+                would be a good fit:
               </p>
               <div className="grid grid-cols-1 gap-4">
                 <Card>
@@ -134,10 +141,16 @@ const SpeakerProfile: React.FC<SpeakerProfileProps> = ({ data }) => {
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                       <div>
                         <h4 className="font-medium">Tech Innovation Summit</h4>
-                        <p className="text-sm text-muted-foreground">San Francisco, CA • June 15-18, 2023</p>
+                        <p className="text-sm text-muted-foreground">
+                          San Francisco, CA • June 15-18, 2023
+                        </p>
                         <div className="flex flex-wrap gap-1 mt-2">
-                          <Badge variant="outline" className="text-xs">AI Ethics</Badge>
-                          <Badge variant="outline" className="text-xs">Technology Policy</Badge>
+                          <Badge variant="outline" className="text-xs">
+                            AI Ethics
+                          </Badge>
+                          <Badge variant="outline" className="text-xs">
+                            Technology Policy
+                          </Badge>
                         </div>
                       </div>
                       <Button size="sm" className="mt-2 md:mt-0">
@@ -147,16 +160,24 @@ const SpeakerProfile: React.FC<SpeakerProfileProps> = ({ data }) => {
                     </div>
                   </CardContent>
                 </Card>
-                
+
                 <Card>
                   <CardContent className="p-4">
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                       <div>
-                        <h4 className="font-medium">Digital Transformation Conference</h4>
-                        <p className="text-sm text-muted-foreground">New York, NY • August 8-10, 2023</p>
+                        <h4 className="font-medium">
+                          Digital Transformation Conference
+                        </h4>
+                        <p className="text-sm text-muted-foreground">
+                          New York, NY • August 8-10, 2023
+                        </p>
                         <div className="flex flex-wrap gap-1 mt-2">
-                          <Badge variant="outline" className="text-xs">Future of Work</Badge>
-                          <Badge variant="outline" className="text-xs">Digital Transformation</Badge>
+                          <Badge variant="outline" className="text-xs">
+                            Future of Work
+                          </Badge>
+                          <Badge variant="outline" className="text-xs">
+                            Digital Transformation
+                          </Badge>
                         </div>
                       </div>
                       <Button size="sm" className="mt-2 md:mt-0">
@@ -180,9 +201,15 @@ const SpeakerProfile: React.FC<SpeakerProfileProps> = ({ data }) => {
 
 Dear [Organizer Name],
 
-I hope this email finds you well. My name is [Your Name], and I am an expert in ${data.topics.slice(0, 3).join(', ')}.
+I hope this email finds you well. My name is [Your Name], and I am an expert in ${data.topics
+                      .slice(0, 3)
+                      .join(", ")}.
 
-I recently came across the [Event Name] and am very interested in the possibility of speaking at your event. My background includes extensive experience in ${data.topics[0]} and ${data.topics[1]}, which I believe would resonate well with your audience.
+I recently came across the [Event Name] and am very interested in the possibility of speaking at your event. My background includes extensive experience in ${
+                      data.topics[0]
+                    } and ${
+                      data.topics[1]
+                    }, which I believe would resonate well with your audience.
 
 I would love to discuss how I can contribute to your event with a presentation on [Specific Topic]. I've attached my speaker profile for your review.
 
