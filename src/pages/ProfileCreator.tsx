@@ -80,16 +80,14 @@ const ProfileCreator = () => {
     setCurrentStep("profile");
 
     try {
-      let contentToAnalyze = "";
+      const analysisResults: string[] = [];
 
       // Extract text from PDF if available
       if (pdfFile) {
         try {
-          contentToAnalyze = await extractTextFromPdf(pdfFile);
-          // console.log(
-          //   "Extracted PDF text:",
-          //   contentToAnalyze.substring(0, 100) + "..."
-          // );
+          const pdfContent = await extractTextFromPdf(pdfFile);
+          const pdfAnalysis = await analyzePdfContent(pdfContent);
+          analysisResults.push(pdfAnalysis);
         } catch (error) {
           console.error("Error extracting text from PDF:", error);
           toast({
@@ -100,44 +98,62 @@ const ProfileCreator = () => {
         }
       }
 
-      // If we have content to analyze (from PDF), use OpenAI
-      if (contentToAnalyze) {
-        try {
-          const openAIResponse = await analyzePdfContent(contentToAnalyze);
-          // console.log("OpenAI Response:", openAIResponse);
+      // Process all URLs that have values
+      const urlTypes = {
+        youtubeUrl: "YouTube URL",
+        websiteUrl: "website URL",
+        linkedinUrl: "LinkedIn URL",
+        bookUrl: "published book URL",
+      };
 
-          // Extract structured data from the OpenAI response
-          const topics = extractTopics(openAIResponse);
-          const personality = extractPersonality(openAIResponse);
-          const summary = extractSummary(openAIResponse);
-
-          setProfileData({
-            summary: summary,
-            topics: topics,
-            personality: personality,
-          });
-
-          toast({
-            title: "Analysis Complete",
-            description: "Speaker profile has been generated successfully",
-          });
-        } catch (error) {
-          console.error("Error analyzing with OpenAI:", error);
-          setProfileData({
-            topics: [],
-            personality: [],
-            summary: "",
-            error: "Failed to analyze content with AI. Please try again.",
-          });
-
-          toast({
-            title: "AI Analysis Failed",
-            description: "Error processing your content with AI",
-            variant: "destructive",
-          });
+      for (const [key, value] of Object.entries(inputUrls)) {
+        if (value.trim() !== "" && key in urlTypes) {
+          try {
+            const urlAnalysis = await analyzeUrl(
+              value,
+              urlTypes[key as keyof typeof urlTypes]
+            );
+            analysisResults.push(urlAnalysis);
+          } catch (error) {
+            console.error(`Error analyzing ${key}:`, error);
+            toast({
+              title: `${key} Analysis Warning`,
+              description: `Could not fully analyze the ${key}. Continuing with other inputs.`,
+              variant: "warning",
+            });
+          }
         }
+      }
+
+      // If we have any analysis results, process them
+      if (analysisResults.length > 0) {
+        let finalProfile: string;
+
+        // If we have multiple sources, synthesize them
+        if (analysisResults.length > 1) {
+          finalProfile = await synthesizeResults(analysisResults);
+        } else {
+          // Just use the single result
+          finalProfile = analysisResults[0];
+        }
+
+        // Extract structured data from the OpenAI response
+        const topics = extractTopics(finalProfile);
+        const personality = extractPersonality(finalProfile);
+        const summary = extractSummary(finalProfile);
+
+        setProfileData({
+          summary: summary,
+          topics: topics,
+          personality: personality,
+        });
+
+        toast({
+          title: "Analysis Complete",
+          description: "Speaker profile has been generated successfully",
+        });
       } else {
-        // Fallback to backend API if no PDF content (or use mock data)
+        // Fallback to backend API if no content was analyzed (or use mock data)
         const formData = new FormData();
 
         Object.entries(inputUrls).forEach(([key, value]) => {
@@ -250,7 +266,7 @@ const ProfileCreator = () => {
                 onChange: handleInputChange,
                 placeholder: "Enter YouTube channel or video URL",
               }}
-              type="youtube"
+              type="default"
             />
 
             <ContentUploader
