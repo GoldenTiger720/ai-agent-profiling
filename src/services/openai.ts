@@ -31,7 +31,7 @@ export async function analyzePdfContent(content: string): Promise<string> {
     const response = await axios.post(
       "https://api.openai.com/v1/chat/completions",
       {
-        model: "gpt-4",
+        model: "gpt-4o-mini",
         messages: [
           {
             role: "system",
@@ -45,7 +45,7 @@ export async function analyzePdfContent(content: string): Promise<string> {
               "\n\nAnalyze this content in detail and create a cool profile of yourself that briefly describes the speaker's topic, the benefits the speaker offers to the audience, and the personality of the speaker from a psychologist's perspective, including some fancy words. Write your profile in the first person.\n\n",
           },
         ],
-        temperature: 0.3,
+        temperature: 0.5,
       },
       {
         headers: {
