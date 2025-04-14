@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,8 +16,10 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import ContentUploader from "@/components/ContentUploader";
 import SpeakerProfile from "@/components/SpeakerProfile";
+import LinkedInConnect from "@/components/LinkedinConnect"; // Import the LinkedIn connect component
 import axios from "axios";
 import { extractTextFromPdf } from "@/services/pdfService";
+import { analyzeLinkedInProfile } from "@/services/linkedinService"; // Import the LinkedIn service
 import {
   analyzePdfContent,
   extractTopics,
@@ -29,13 +32,15 @@ import {
 interface ProfileData {
   topics: string[];
   personality: string[];
-  summary: any;
+  summary: string[];
   isLoading?: boolean;
   error?: string;
 }
 
 const ProfileCreator = () => {
   const { toast } = useToast();
+  const location = useLocation();
+
   const [inputUrls, setInputUrls] = useState({
     pdfUrl: "",
     youtubeUrl: "",
@@ -47,6 +52,28 @@ const ProfileCreator = () => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [currentStep, setCurrentStep] = useState("input");
   const [profileData, setProfileData] = useState<ProfileData | null>(null);
+  const [linkedInProfile, setLinkedInProfile] = useState<any>(null);
+
+  // Check if we came from LinkedIn callback
+  useEffect(() => {
+    const state = location.state as { linkedinConnected?: boolean } | null;
+    if (state?.linkedinConnected) {
+      // Get LinkedIn profile data from session storage
+      const profileData = sessionStorage.getItem("linkedin_profile_data");
+      if (profileData) {
+        try {
+          const parsedData = JSON.parse(profileData);
+          setLinkedInProfile(parsedData);
+          toast({
+            title: "LinkedIn Profile Connected",
+            description: "Your LinkedIn profile data has been imported",
+          });
+        } catch (error) {
+          console.error("Error parsing LinkedIn profile data:", error);
+        }
+      }
+    }
+  }, [location, toast]);
 
   const handleInputChange = (
     e: React.FormEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -59,10 +86,23 @@ const ProfileCreator = () => {
     setPdfFile(files.length > 0 ? files[0] : null);
   };
 
+  const handleLinkedInProfileConnected = (profileData: any) => {
+    setLinkedInProfile(profileData);
+    // Extract LinkedIn URL if available
+    if (profileData?.id) {
+      const linkedinUrl = `https://www.linkedin.com/in/${profileData.id}`;
+      setInputUrls((prev) => ({
+        ...prev,
+        linkedinUrl,
+      }));
+    }
+  };
+
   const handleAnalyze = async () => {
     // Check if any input source is provided
     const hasInput =
       pdfFile ||
+      linkedInProfile ||
       inputUrls.youtubeUrl.trim() !== "" ||
       inputUrls.websiteUrl.trim() !== "" ||
       inputUrls.linkedinUrl.trim() !== "" ||
@@ -83,7 +123,7 @@ const ProfileCreator = () => {
     setProfileData({
       topics: [],
       personality: [],
-      summary: "",
+      summary: [""],
       isLoading: true,
     });
     setCurrentStep("profile");
@@ -108,6 +148,63 @@ const ProfileCreator = () => {
         }
       }
 
+      // Process LinkedIn data if available
+      if (linkedInProfile) {
+        try {
+          // Create a text representation of the LinkedIn profile
+          const linkedInProfileText = `
+Name: ${linkedInProfile.firstName} ${linkedInProfile.lastName}
+Headline: ${linkedInProfile.headline || ""}
+Industry: ${linkedInProfile.industry || ""}
+Summary: ${linkedInProfile.summary || ""}
+          
+Experience:
+${
+  (linkedInProfile.positions &&
+    linkedInProfile.positions
+      .map(
+        (pos: any) =>
+          `- ${pos.title} at ${pos.companyName} (${
+            pos.isCurrent ? "Current" : ""
+          })`
+      )
+      .join("\n")) ||
+  "No experience data available"
+}
+
+Skills:
+${
+  (linkedInProfile.skills && linkedInProfile.skills.join(", ")) ||
+  "No skills data available"
+}
+
+Education:
+${
+  (linkedInProfile.education &&
+    linkedInProfile.education
+      .map(
+        (edu: any) =>
+          `- ${edu.degree || ""} in ${edu.fieldOfStudy || ""} at ${
+            edu.schoolName
+          }`
+      )
+      .join("\n")) ||
+  "No education data available"
+}
+`;
+          const linkedInAnalysis = await analyzePdfContent(linkedInProfileText);
+          analysisResults.push(linkedInAnalysis);
+        } catch (error) {
+          console.error("Error analyzing LinkedIn data:", error);
+          toast({
+            title: "LinkedIn Analysis Warning",
+            description:
+              "Had trouble analyzing LinkedIn data. Continuing with other sources.",
+            variant: "default",
+          });
+        }
+      }
+
       // Process all URLs that have values
       const urlTypes = {
         youtubeUrl: "YouTube URL",
@@ -120,11 +217,17 @@ const ProfileCreator = () => {
       for (const [key, value] of Object.entries(inputUrls)) {
         if (value.trim() !== "" && key in urlTypes) {
           try {
-            const urlAnalysis = await analyzeUrl(
-              value,
-              urlTypes[key as keyof typeof urlTypes]
-            );
-            analysisResults.push(urlAnalysis);
+            // Special handling for LinkedIn URL if not already processed via OAuth
+            if (key === "linkedinUrl" && !linkedInProfile) {
+              const linkedInAnalysis = await analyzeLinkedInProfile(value);
+              analysisResults.push(linkedInAnalysis);
+            } else if (key !== "linkedinUrl" || !linkedInProfile) {
+              const urlAnalysis = await analyzeUrl(
+                value,
+                urlTypes[key as keyof typeof urlTypes]
+              );
+              analysisResults.push(urlAnalysis);
+            }
           } catch (error) {
             console.error(`Error analyzing ${key}:`, error);
             // More informative toast
@@ -191,7 +294,7 @@ const ProfileCreator = () => {
           );
 
           setProfileData({
-            summary: response.data.summary || "No summary available",
+            summary: response.data.summary || ["No summary available"],
             topics: response.data.topics || [],
             personality: response.data.personality || [],
           });
@@ -278,6 +381,11 @@ const ProfileCreator = () => {
               />
             </div>
 
+            {/* Add LinkedIn Connect Component */}
+            <LinkedInConnect
+              onProfileConnected={handleLinkedInProfileConnected}
+            />
+
             <ContentUploader
               icon={<Youtube className="h-5 w-5 text-findmystage-green" />}
               title="YouTube Content"
@@ -300,18 +408,6 @@ const ProfileCreator = () => {
                 value: inputUrls.websiteUrl,
                 onChange: handleInputChange,
                 placeholder: "Enter website URL",
-              }}
-            />
-
-            <ContentUploader
-              icon={<Linkedin className="h-5 w-5 text-findmystage-green" />}
-              title="LinkedIn Profile"
-              description="Link to your LinkedIn profile"
-              inputProps={{
-                name: "linkedinUrl",
-                value: inputUrls.linkedinUrl,
-                onChange: handleInputChange,
-                placeholder: "Enter LinkedIn profile URL",
               }}
             />
 
