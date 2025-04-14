@@ -52,6 +52,10 @@ async function callOpenAI(
     const config = getConfig();
     const OPENAI_API_KEY = config.apiKey;
 
+    console.log(systemPrompt);
+    console.log("===========================================");
+    console.log(userPrompt);
+
     if (!OPENAI_API_KEY) {
       console.error("OpenAI API key is missing");
       throw new Error("OpenAI API key is not configured");
@@ -78,6 +82,7 @@ async function callOpenAI(
           "Content-Type": "application/json",
           Authorization: `Bearer ${OPENAI_API_KEY}`,
         },
+        timeout: 60000, // 60 second timeout
       }
     );
 
@@ -101,6 +106,8 @@ async function callOpenAI(
       throw new Error("Authentication error: Please check your OpenAI API key");
     } else if (error.response?.status === 429) {
       throw new Error("Rate limit exceeded: Too many requests to OpenAI API");
+    } else if (error.code === "ECONNABORTED") {
+      throw new Error("OpenAI API request timed out. Please try again later.");
     } else {
       throw new Error(`Failed to call OpenAI: ${errorMessage}`);
     }
@@ -117,33 +124,43 @@ export async function analyzeUrl(
   url: string,
   urlType: string
 ): Promise<string> {
-  // Special handling for YouTube URLs
-  if (urlType === "YouTube URL") {
-    try {
-      // Analyze YouTube channel using YouTube Data API
-      const channelData = await analyzeYouTubeChannel(url);
+  try {
+    // Special handling for YouTube URLs
+    if (urlType === "YouTube URL") {
+      try {
+        // Analyze YouTube channel using YouTube Data API
+        const channelData = await analyzeYouTubeChannel(url);
 
-      // Prepare a detailed prompt for OpenAI to generate a profile
-      const systemPrompt =
-        "You are an expert at creating compelling professional profiles based on digital content. Create an engaging, first-person narrative that highlights the professional's unique strengths.";
+        // Safety check for channel data
+        if (!channelData) {
+          throw new Error("Could not fetch YouTube channel data");
+        }
 
-      const userPrompt = `Create a professional profile based on the following YouTube channel details:
+        // Prepare a detailed prompt for OpenAI to generate a profile
+        const systemPrompt =
+          "You are an expert at creating compelling professional profiles based on digital content. Create an engaging, first-person narrative that highlights the professional's unique strengths.";
 
-Channel Name: ${channelData.title}
-Description: ${channelData.description}
-Subscriber Count: ${channelData.subscriberCount}
-Total View Count: ${channelData.viewCount}
+        const userPrompt = `Create a professional profile based on the following YouTube channel details:
+
+Channel Name: ${channelData.title || "Unnamed Channel"}
+Description: ${channelData.description || "No description available"}
+Subscriber Count: ${channelData.subscriberCount || "0"}
+Total View Count: ${channelData.viewCount || "0"}
 
 Top Videos:
-${channelData.topVideos
-  .map(
-    (video, index) => `
-${index + 1}. ${video.title}
-   Views: ${video.viewCount}
-   Description: ${video.description}
+${
+  channelData.topVideos && channelData.topVideos.length > 0
+    ? channelData.topVideos
+        .map(
+          (video, index) => `
+${index + 1}. ${video.title || "Untitled Video"}
+   Views: ${video.viewCount || "0"}
+   Description: ${video.description || "No description available"}
 `
-  )
-  .join("\n")}
+        )
+        .join("\n")
+    : "No videos available"
+}
 
 Guidelines:
 1. Write from a first-person perspective
@@ -155,18 +172,22 @@ Guidelines:
 
 Generate a comprehensive, engaging profile that showcases this professional's expertise and potential as a speaker.`;
 
-      return await callOpenAI(systemPrompt, userPrompt);
-    } catch (error) {
-      console.error("Error analyzing YouTube channel:", error);
-      throw new Error("Failed to analyze YouTube channel");
+        return await callOpenAI(systemPrompt, userPrompt);
+      } catch (error) {
+        console.error("Error analyzing YouTube channel:", error);
+        throw new Error(
+          `Failed to analyze YouTube channel: ${
+            error instanceof Error ? error.message : "Unknown error"
+          }`
+        );
+      }
     }
-  }
 
-  // Generic URL analysis for other sources
-  const systemPrompt =
-    "You are an expert at extracting and summarizing professional information from various online sources. Provide a detailed, first-person profile based on the content.";
+    // Generic URL analysis for other sources
+    const systemPrompt =
+      "You are an expert at extracting and summarizing professional information from various online sources. Provide a detailed, first-person profile based on the content.";
 
-  const userPrompt = `URL Type: ${urlType}
+    const userPrompt = `URL Type: ${urlType}
 URL: ${url}
 
 Please analyze this URL thoroughly and extract key information about the professional. Create a comprehensive first-person profile that covers:
@@ -180,7 +201,15 @@ Write the profile in a first-person perspective, as if the person is speaking di
 
 If the URL is not accessible or does not provide enough information, suggest potential areas of exploration based on the URL type.`;
 
-  return callOpenAI(systemPrompt, userPrompt);
+    return await callOpenAI(systemPrompt, userPrompt);
+  } catch (error) {
+    console.error(`Error analyzing ${urlType}:`, error);
+    throw new Error(
+      `Failed to analyze ${urlType}: ${
+        error instanceof Error ? error.message : "Unknown error"
+      }`
+    );
+  }
 }
 
 /**
@@ -189,13 +218,31 @@ If the URL is not accessible or does not provide enough information, suggest pot
  * @returns Generated profile content
  */
 export async function analyzePdfContent(content: string): Promise<string> {
-  const systemPrompt =
-    "You should serve as a professional summarizing a client's introduction or resume. Please make it from a first person perspective. Include a greeting like 'Hello!' in your profile and a closing greeting in your profile closing.";
-  const userPrompt =
-    content +
-    "\n\nAnalyze this content in detail and create a cool profile of yourself that briefly describes the speaker's topic, the benefits the speaker offers to the audience, and the personality of the speaker from a psychologist's perspective, including some fancy words. Write your profile in the first person.\n\n";
+  try {
+    // Check if content is empty or too short
+    if (!content || content.trim().length < 50) {
+      throw new Error("PDF content is too short or empty");
+    }
 
-  return callOpenAI(systemPrompt, userPrompt);
+    // Truncate content if it's too long (OpenAI has token limits)
+    const truncatedContent =
+      content.length > 10000 ? content.slice(0, 10000) + "..." : content;
+
+    const systemPrompt =
+      "You should serve as a professional summarizing a client's introduction or resume. Please make it from a first person perspective. Include a greeting like 'Hello!' in your profile and a closing greeting in your profile closing.";
+    const userPrompt =
+      truncatedContent +
+      "\n\nAnalyze this content in detail and create a cool profile of yourself that briefly describes the speaker's topic, the benefits the speaker offers to the audience, and the personality of the speaker from a psychologist's perspective, including some fancy words. Write your profile in the first person.\n\n";
+
+    return await callOpenAI(systemPrompt, userPrompt);
+  } catch (error) {
+    console.error("Error analyzing PDF content:", error);
+    throw new Error(
+      `Failed to analyze PDF content: ${
+        error instanceof Error ? error.message : "Unknown error"
+      }`
+    );
+  }
 }
 
 /**
@@ -204,10 +251,16 @@ export async function analyzePdfContent(content: string): Promise<string> {
  * @returns Synthesized profile content
  */
 export async function synthesizeResults(results: string[]): Promise<string> {
-  const systemPrompt =
-    "You are an expert at synthesizing multiple sources of professional information into a cohesive, compelling narrative. Create a unified first-person profile that captures the essence of the professional's unique journey and capabilities.";
+  try {
+    // Check if results array is valid
+    if (!results || results.length === 0) {
+      throw new Error("No results to synthesize");
+    }
 
-  const userPrompt = `I have multiple professional profiles from different sources. Please synthesize these into a single, comprehensive first-person narrative:
+    const systemPrompt =
+      "You are an expert at synthesizing multiple sources of professional information into a cohesive, compelling narrative. Create a unified first-person profile that captures the essence of the professional's unique journey and capabilities.";
+
+    const userPrompt = `I have multiple professional profiles from different sources. Please synthesize these into a single, comprehensive first-person narrative:
 
 ${results
   .map(
@@ -227,7 +280,15 @@ Guidelines for synthesis:
 
 Craft a profile that feels authentic, dynamic, and representative of the professional's true capabilities and personality.`;
 
-  return callOpenAI(systemPrompt, userPrompt);
+    return await callOpenAI(systemPrompt, userPrompt);
+  } catch (error) {
+    console.error("Error synthesizing results:", error);
+    throw new Error(
+      `Failed to synthesize results: ${
+        error instanceof Error ? error.message : "Unknown error"
+      }`
+    );
+  }
 }
 
 /**
@@ -237,6 +298,11 @@ Craft a profile that feels authentic, dynamic, and representative of the profess
  */
 export function extractTopics(openAIResponse: string): string[] {
   try {
+    // Check for valid input
+    if (!openAIResponse || typeof openAIResponse !== "string") {
+      return ["Leadership", "Communication", "Industry Expertise"];
+    }
+
     const topicsRegex =
       /topics:.*?(?:\n|$)|areas of expertise:.*?(?:\n|$)|specializes in:.*?(?:\n|$)|field of activity:.*?(?:\n|$)|specialization:.*?(?:\n|$)/i;
     const topicsMatch = openAIResponse.match(topicsRegex);
@@ -252,7 +318,9 @@ export function extractTopics(openAIResponse: string): string[] {
         .split(/,|\sand\s/)
         .map((topic) => topic.trim())
         .filter(Boolean);
-      return topics;
+      return topics.length > 0
+        ? topics
+        : ["Leadership", "Communication", "Industry Expertise"];
     }
 
     // Fallback to extracting potential topics from the text
@@ -285,6 +353,11 @@ export function extractTopics(openAIResponse: string): string[] {
  */
 export function extractPersonality(openAIResponse: string): string[] {
   try {
+    // Check for valid input
+    if (!openAIResponse || typeof openAIResponse !== "string") {
+      return ["Passionate", "Insightful", "Engaging", "Authoritative"];
+    }
+
     const personalityRegex =
       /personality:.*?(?:\n|$)|characterized by:.*?(?:\n|$)|traits:.*?(?:\n|$)/i;
     const personalityMatch = openAIResponse.match(personalityRegex);
@@ -297,7 +370,9 @@ export function extractPersonality(openAIResponse: string): string[] {
         .split(/,|\sand\s/)
         .map((trait) => trait.trim())
         .filter(Boolean);
-      return traits;
+      return traits.length > 0
+        ? traits
+        : ["Passionate", "Insightful", "Engaging", "Authoritative"];
     }
 
     // Fallback to extracting personality descriptors
@@ -330,9 +405,26 @@ export function extractPersonality(openAIResponse: string): string[] {
  */
 export function extractSummary(openAIResponse: string): any {
   try {
-    const paragraphs = openAIResponse.split(/\n\n+/);
+    // Check for valid input
+    if (!openAIResponse || typeof openAIResponse !== "string") {
+      return ["An experienced professional with expertise in their field."];
+    }
+
+    const paragraphs = openAIResponse
+      .split(/\n\n+/)
+      .filter((p) => p.trim().length > 0);
+
     if (paragraphs.length > 0) {
       return paragraphs;
+    }
+
+    // If no paragraphs found with double newlines, try single newlines
+    const singleLineParagraphs = openAIResponse
+      .split(/\n+/)
+      .filter((p) => p.trim().length > 0);
+
+    if (singleLineParagraphs.length > 0) {
+      return singleLineParagraphs;
     }
   } catch (error) {
     console.error("Error extracting summary:", error);
