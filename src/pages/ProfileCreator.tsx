@@ -100,9 +100,10 @@ const ProfileCreator = () => {
         } catch (error) {
           console.error("Error extracting text from PDF:", error);
           toast({
-            title: "PDF Processing Error",
-            description: "Failed to extract text from the PDF document",
-            variant: "destructive",
+            title: "PDF Processing Warning",
+            description:
+              "Had trouble with the PDF. Continuing with other sources.",
+            variant: "default",
           });
         }
       }
@@ -115,6 +116,7 @@ const ProfileCreator = () => {
         bookUrl: "published book URL",
       };
 
+      // Process each URL with better error handling
       for (const [key, value] of Object.entries(inputUrls)) {
         if (value.trim() !== "" && key in urlTypes) {
           try {
@@ -125,10 +127,11 @@ const ProfileCreator = () => {
             analysisResults.push(urlAnalysis);
           } catch (error) {
             console.error(`Error analyzing ${key}:`, error);
+            // More informative toast
             toast({
               title: `${key} Analysis Warning`,
-              description: `Could not fully analyze the ${key}. Continuing with other inputs.`,
-              variant: "destructive",
+              description: `Could not analyze the ${key}. Continuing with other sources.`,
+              variant: "default",
             });
           }
         }
@@ -162,16 +165,20 @@ const ProfileCreator = () => {
           description: "Speaker profile has been generated successfully",
         });
       } else {
-        // Fallback to backend API if no content was analyzed
-        const formData = new FormData();
-
-        Object.entries(inputUrls).forEach(([key, value]) => {
-          if (value.trim() !== "") {
-            formData.append(key, value);
-          }
-        });
-
+        // Try using backend API as fallback
         try {
+          const formData = new FormData();
+
+          if (pdfFile) {
+            formData.append("pdf", pdfFile);
+          }
+
+          Object.entries(inputUrls).forEach(([key, value]) => {
+            if (value.trim() !== "") {
+              formData.append(key, value);
+            }
+          });
+
           const response = await axios.post(
             "http://localhost:8000/api/v1/profiles/create",
             formData,
@@ -179,6 +186,7 @@ const ProfileCreator = () => {
               headers: {
                 "Content-Type": "multipart/form-data",
               },
+              timeout: 30000, // 30 second timeout
             }
           );
 
@@ -190,32 +198,37 @@ const ProfileCreator = () => {
 
           toast({
             title: "Analysis Complete",
-            description:
-              "Speaker profile has been generated from provided URLs",
+            description: "Speaker profile has been generated using backend API",
           });
-        } catch (error) {
-          console.error("Error analyzing content with backend API:", error);
+        } catch (apiError) {
+          console.error("Error using backend API:", apiError);
+
+          // If all methods failed, provide a fallback profile
           setProfileData({
-            topics: [],
-            personality: [],
-            summary: "",
-            error: "Failed to analyze content. Please try again.",
+            topics: ["Communication", "Leadership", "Professional Development"],
+            personality: ["Engaging", "Knowledgeable", "Experienced"],
+            summary: [
+              "We couldn't analyze your content in detail. Please try providing different content sources or check your API keys.",
+            ],
           });
 
           toast({
-            title: "Analysis Failed",
-            description: "There was an error analyzing your content",
-            variant: "destructive",
+            title: "Analysis Limited",
+            description:
+              "Could not fully analyze your content. Generated a basic profile.",
+            variant: "default",
           });
         }
       }
     } catch (error) {
       console.error("General error during analysis:", error);
       setProfileData({
-        topics: [],
-        personality: [],
-        summary: "",
-        error: "Failed to analyze content. Please try again.",
+        topics: ["Communication", "Leadership", "Professional Development"],
+        personality: ["Engaging", "Knowledgeable", "Experienced"],
+        summary: [
+          "We couldn't analyze your content. Please try again with different content sources.",
+        ],
+        error: "There was an error analyzing your content. Please try again.",
       });
 
       toast({

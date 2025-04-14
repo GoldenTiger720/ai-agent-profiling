@@ -14,11 +14,28 @@ export function extractYouTubeUsername(url: string): string | null {
     const urlObj = new URL(url);
     const pathname = urlObj.pathname;
 
-    // Match @username format or channel/username format
-    const match = pathname.match(/^\/(@[^/]+)|^\/channel\/([^/]+)/);
+    // Match different URL patterns
+    // - /c/channelname
+    // - /channel/ID
+    // - /user/username
+    // - /@username
+    const match = pathname.match(
+      /^\/(@[^/]+)|^\/channel\/([^/]+)|^\/c\/([^/]+)|^\/user\/([^/]+)/
+    );
 
     if (match) {
-      return (match[1] || match[2] || "").replace("@", "");
+      // Return the first non-undefined group
+      return (match[1] || match[2] || match[3] || match[4] || "").replace(
+        "@",
+        ""
+      );
+    }
+
+    // Try to get channel from video URL
+    if (pathname.includes("/watch") && urlObj.searchParams.has("v")) {
+      const videoId = urlObj.searchParams.get("v");
+      // Note: You'd need to implement a function to fetch channel info from video ID
+      return videoId;
     }
 
     return null;
@@ -66,8 +83,12 @@ export async function fetchYouTubeChannelDetails(
       }
     );
 
-    // If no results, try by custom URL handle
-    if (channelResponse.data.items.length === 0) {
+    // Check if we have items in the response
+    if (
+      !channelResponse.data.items ||
+      channelResponse.data.items.length === 0
+    ) {
+      // Try by custom URL handle
       channelResponse = await axios.get(
         "https://youtube.googleapis.com/youtube/v3/channels",
         {
@@ -80,8 +101,28 @@ export async function fetchYouTubeChannelDetails(
       );
     }
 
+    // If still no results, try by channel ID
+    if (
+      !channelResponse.data.items ||
+      channelResponse.data.items.length === 0
+    ) {
+      channelResponse = await axios.get(
+        "https://youtube.googleapis.com/youtube/v3/channels",
+        {
+          params: {
+            part: "snippet,statistics",
+            id: username,
+            key: YOUTUBE_API_KEY,
+          },
+        }
+      );
+    }
+
     // If still no results, throw an error
-    if (channelResponse.data.items.length === 0) {
+    if (
+      !channelResponse.data.items ||
+      channelResponse.data.items.length === 0
+    ) {
       throw new Error("Channel not found");
     }
 
@@ -95,10 +136,10 @@ export async function fetchYouTubeChannelDetails(
     return {
       channelId,
       title: channelItem.snippet.title,
-      description: channelItem.snippet.description,
-      viewCount: channelItem.statistics.viewCount,
+      description: channelItem.snippet.description || "",
+      viewCount: channelItem.statistics.viewCount || "0",
       subscriberCount: channelItem.statistics.subscriberCount || "0",
-      videoCount: channelItem.statistics.videoCount,
+      videoCount: channelItem.statistics.videoCount || "0",
       topVideos,
     };
   } catch (error) {
@@ -131,11 +172,21 @@ export async function fetchTopVideos(
       }
     );
 
+    // Check if we have items
+    if (!searchResponse.data.items || searchResponse.data.items.length === 0) {
+      return [];
+    }
+
     // Get video IDs to fetch detailed statistics
     const videoIds = searchResponse.data.items
-      .map((item: any) => item.id.videoId)
+      .map((item: any) => item.id?.videoId)
       .filter(Boolean)
       .join(",");
+
+    // If no video IDs, return empty array
+    if (!videoIds) {
+      return [];
+    }
 
     // Fetch video statistics
     const statsResponse = await axios.get(
@@ -149,15 +200,20 @@ export async function fetchTopVideos(
       }
     );
 
-    // Combine snippet and statistics
+    // Combine snippet and statistics with safety checks
     return searchResponse.data.items.map((item: any, index: number) => {
-      const stats = statsResponse.data.items.find(
-        (statsItem: any) => statsItem.id === item.id.videoId
-      );
+      const videoId = item.id?.videoId;
+
+      const stats =
+        videoId && statsResponse.data.items
+          ? statsResponse.data.items.find(
+              (statsItem: any) => statsItem.id === videoId
+            )
+          : null;
 
       return {
-        title: item.snippet.title,
-        description: item.snippet.description,
+        title: item.snippet?.title || "Untitled Video",
+        description: item.snippet?.description || "",
         viewCount: stats?.statistics?.viewCount || "0",
       };
     });
@@ -173,19 +229,28 @@ export async function fetchTopVideos(
  * @returns Detailed channel analysis or throws an error
  */
 export async function analyzeYouTubeChannel(url: string) {
-  // Extract username from URL
-  const username = extractYouTubeUsername(url);
+  try {
+    // Extract username from URL
+    const username = extractYouTubeUsername(url);
 
-  if (!username) {
-    throw new Error("Invalid YouTube channel URL");
+    if (!username) {
+      throw new Error("Invalid YouTube channel URL");
+    }
+
+    // Fetch channel details
+    const channelDetails = await fetchYouTubeChannelDetails(username);
+
+    if (!channelDetails) {
+      throw new Error("Could not fetch channel details");
+    }
+
+    return channelDetails;
+  } catch (error) {
+    console.error("Error analyzing YouTube channel:", error);
+    throw new Error(
+      `Failed to analyze YouTube channel: ${
+        error instanceof Error ? error.message : "Unknown error"
+      }`
+    );
   }
-
-  // Fetch channel details
-  const channelDetails = await fetchYouTubeChannelDetails(username);
-
-  if (!channelDetails) {
-    throw new Error("Could not fetch channel details");
-  }
-
-  return channelDetails;
 }
