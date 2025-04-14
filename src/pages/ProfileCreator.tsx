@@ -22,6 +22,8 @@ import {
   extractTopics,
   extractPersonality,
   extractSummary,
+  analyzeUrl,
+  synthesizeResults,
 } from "@/services/openai";
 
 interface ProfileData {
@@ -47,9 +49,9 @@ const ProfileCreator = () => {
   const [profileData, setProfileData] = useState<ProfileData | null>(null);
 
   const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+    e: React.FormEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
-    const { name, value } = e.target;
+    const { name, value } = e.currentTarget;
     setInputUrls((prev) => ({ ...prev, [name]: value }));
   };
 
@@ -58,9 +60,15 @@ const ProfileCreator = () => {
   };
 
   const handleAnalyze = async () => {
+    // Check if any input source is provided
     const hasInput =
-      pdfFile !== null ||
-      Object.values(inputUrls).some((url) => url.trim() !== "");
+      pdfFile ||
+      inputUrls.youtubeUrl.trim() !== "" ||
+      inputUrls.websiteUrl.trim() !== "" ||
+      inputUrls.linkedinUrl.trim() !== "" ||
+      inputUrls.bookUrl.trim() !== "";
+
+    // If no input is provided, show error toast
     if (!hasInput) {
       toast({
         title: "Input Required",
@@ -70,6 +78,7 @@ const ProfileCreator = () => {
       return;
     }
 
+    // Set loading state
     setIsAnalyzing(true);
     setProfileData({
       topics: [],
@@ -119,7 +128,7 @@ const ProfileCreator = () => {
             toast({
               title: `${key} Analysis Warning`,
               description: `Could not fully analyze the ${key}. Continuing with other inputs.`,
-              variant: "warning",
+              variant: "destructive",
             });
           }
         }
@@ -153,7 +162,7 @@ const ProfileCreator = () => {
           description: "Speaker profile has been generated successfully",
         });
       } else {
-        // Fallback to backend API if no content was analyzed (or use mock data)
+        // Fallback to backend API if no content was analyzed
         const formData = new FormData();
 
         Object.entries(inputUrls).forEach(([key, value]) => {
