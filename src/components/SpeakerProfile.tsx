@@ -6,6 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Share2, Download, UserCheck, MessageSquare, Mail } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Progress } from "@/components/ui/progress";
+import ReactMarkdown from "react-markdown";
 
 interface ProfileData {
   topics: string[];
@@ -59,6 +60,11 @@ const SpeakerProfile: React.FC<SpeakerProfileProps> = ({ data }) => {
     );
   }
 
+  // Format the summary content as a single string if it's an array
+  const summaryContent = Array.isArray(data.summary)
+    ? data.summary.join("\n\n")
+    : data.summary;
+
   return (
     <div className="space-y-8">
       <Card className="output-section">
@@ -78,12 +84,8 @@ const SpeakerProfile: React.FC<SpeakerProfileProps> = ({ data }) => {
           </div>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div className="space-y-4">
-            {data.summary.map((para, index) => (
-              <p key={index} className="text-base leading-relaxed">
-                {para}
-              </p>
-            ))}
+          <div className="space-y-4 prose dark:prose-invert max-w-none">
+            <ReactMarkdown>{summaryContent}</ReactMarkdown>
           </div>
 
           <Separator />
